@@ -291,7 +291,7 @@
 
         .download-card-btn {
             font-family: 'Fredoka', sans-serif;
-            background: #6c5ce7;
+            background: #27ae60;
             color: white;
             border: none;
             border-radius: 8px;
@@ -299,12 +299,12 @@
             font-size: 11px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 2px 5px rgba(108, 92, 231, 0.2);
+            box-shadow: 0 2px 5px rgba(39, 174, 96, 0.2);
             transition: background 0.2s;
         }
 
         .download-card-btn:hover {
-            background: #5b4cc4;
+            background: #219653;
         }
     </style>
 </head>
@@ -366,7 +366,7 @@
         </div>
     </div>
 
-    <canvas id="hiddenCaptureCanvas" width="320" height="320" style="display:none;"></canvas>
+    <canvas id="hiddenCaptureCanvas" width="1280" height="1280" style="display:none;"></canvas>
 
     <script>
         const sentenceTemplate = "I joined the English Club because I love ";
@@ -456,8 +456,9 @@
         async function initGame() {
             updateDashboardUI();
             try {
+                // Request maximum available camera resolution from the device
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: { ideal: 640 }, height: { ideal: 480 } } 
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } } 
                 });
                 webcamVideo.srcObject = stream;
                 
@@ -525,7 +526,8 @@
             requestAnimationFrame(gameLoop);
         }
 
-        function captureStudentSnapshot() {
+        // Extracts maximum fidelity image with zero compression
+        function captureStudentSnapshot(qualitySetting) {
             const ctx = captureCanvas.getContext('2d');
             ctx.translate(captureCanvas.width, 0);
             ctx.scale(-1, 1);
@@ -534,7 +536,7 @@
             const sY = (webcamVideo.videoHeight - size) / 2;
             ctx.drawImage(webcamVideo, sX, sY, size, size, 0, 0, captureCanvas.width, captureCanvas.height);
             ctx.setTransform(1, 0, 0, 1, 0, 0);
-            return captureCanvas.toDataURL('image/jpeg', 0.6);
+            return captureCanvas.toToDataURL ? captureCanvas.toDataURL('image/jpeg', qualitySetting) : captureCanvas.toDataURL('image/jpeg');
         }
 
         function triggerSelection(chosenWord) {
@@ -542,20 +544,27 @@
             playShutterSound();
             flash.classList.add('shutter');
             
-            const snapshot = captureStudentSnapshot();
+            // 1. Capture absolute HD copy for an immediate file download (1.0 = 100% Quality)
+            const hdImage = captureCanvas.toDataURL('image/jpeg', 1.0);
+            downloadSnapshot(hdImage, chosenWord);
+
+            // 2. Capture a lightweight copy for the dashboard so local storage doesn't crash (0.2 = Small size)
+            const previewSnapshot = captureCanvas.toDataURL('image/jpeg', 0.2);
+            
             setTimeout(() => flash.classList.remove('shutter'), 200);
 
             document.getElementById('sentence-blank').textContent = chosenWord;
             document.getElementById('sentence-blank').classList.add('filled');
-            statusMessage.innerHTML = `📸 <b>Captured!</b> Reading out loud...`;
+            statusMessage.innerHTML = `📸 <b>Captured & Saved!</b> Reading out loud...`;
             
             const fullStatement = `${sentenceTemplate} ${chosenWord}.`;
             speakSentence(fullStatement);
 
             let history = JSON.parse(localStorage.getItem('englishClubRandomizedRecords')) || [];
-            // Assign a unique ID using timestamps so we can accurately download specific individual cards
             const uniqueId = 'snap_' + Date.now();
-            history.push({ id: uniqueId, word: chosenWord, image: snapshot });
+            
+            // Store the lightweight thumbnail version to stay perfectly under the 5MB browser limit
+            history.push({ id: uniqueId, word: chosenWord, image: previewSnapshot });
             localStorage.setItem('englishClubRandomizedRecords', JSON.stringify(history));
             updateDashboardUI();
 
@@ -568,8 +577,8 @@
         function downloadSnapshot(base64Image, wordType) {
             const downloadLink = document.createElement('a');
             downloadLink.href = base64Image;
-            // Saves automatically with a recognizable format like: student-love-books.jpg
-            downloadLink.download = `student-love-${wordType}.jpg`;
+            // Name format matches the student's exact target vocab choice
+            downloadLink.download = `student-love-${wordType}_${Date.now()}.jpg`;
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
@@ -590,19 +599,17 @@
                 const card = document.createElement('div');
                 card.className = 'student-snapshot-card';
                 
-                // Image element
                 const img = document.createElement('img');
                 img.src = item.image;
                 
-                // Label snippet
                 const label = document.createElement('div');
                 label.className = 'class-snippet';
                 label.innerHTML = `love <b>${item.word}</b>`;
                 
-                // Interactive download button
+                // Redundant safety download button in dashboard (uses stored preview quality)
                 const btn = document.createElement('button');
                 btn.className = 'download-card-btn';
-                btn.textContent = '💾 Save';
+                btn.textContent = '📥 Get Copy';
                 btn.onclick = () => downloadSnapshot(item.image, item.word);
 
                 card.appendChild(img);
@@ -616,7 +623,7 @@
         }
 
         function clearSavedData() {
-            if (confirm("Clear all student submissions?")) {
+            if (confirm("Clear all student submissions from dashboard?")) {
                 localStorage.removeItem('englishClubRandomizedRecords');
                 updateDashboardUI();
             }
