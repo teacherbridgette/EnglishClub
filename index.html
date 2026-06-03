@@ -456,7 +456,7 @@
         async function initGame() {
             updateDashboardUI();
             try {
-                // Request maximum available camera resolution from the device
+                // Request maximum available camera resolution from the device hardware
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { width: { ideal: 1280 }, height: { ideal: 720 } } 
                 });
@@ -526,17 +526,26 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Extracts maximum fidelity image with zero compression
-        function captureStudentSnapshot(qualitySetting) {
+        // Processes the canvas image elements correctly and safely
+        function captureStudentSnapshot() {
             const ctx = captureCanvas.getContext('2d');
+            
+            // Wipe the rendering layer clean
+            ctx.clearRect(0, 0, captureCanvas.width, captureCanvas.height);
+            
+            // Mirror coordinates accurately to match live webcam box behavior
             ctx.translate(captureCanvas.width, 0);
             ctx.scale(-1, 1);
+            
+            // Crop a perfect square out of the raw camera frame data
             const size = Math.min(webcamVideo.videoWidth, webcamVideo.videoHeight);
             const sX = (webcamVideo.videoWidth - size) / 2;
             const sY = (webcamVideo.videoHeight - size) / 2;
+            
             ctx.drawImage(webcamVideo, sX, sY, size, size, 0, 0, captureCanvas.width, captureCanvas.height);
+            
+            // Reset coordinates system back to default standard layout mapping
             ctx.setTransform(1, 0, 0, 1, 0, 0);
-            return captureCanvas.toToDataURL ? captureCanvas.toDataURL('image/jpeg', qualitySetting) : captureCanvas.toDataURL('image/jpeg');
         }
 
         function triggerSelection(chosenWord) {
@@ -544,12 +553,15 @@
             playShutterSound();
             flash.classList.add('shutter');
             
-            // 1. Capture absolute HD copy for an immediate file download (1.0 = 100% Quality)
+            // 1. Render current camera frame data onto the master capture canvas layout
+            captureStudentSnapshot();
+            
+            // 2. Extract maximum resolution target string (1.0 = 100% Quality Output)
             const hdImage = captureCanvas.toDataURL('image/jpeg', 1.0);
             downloadSnapshot(hdImage, chosenWord);
 
-            // 2. Capture a lightweight copy for the dashboard so local storage doesn't crash (0.2 = Small size)
-            const previewSnapshot = captureCanvas.toDataURL('image/jpeg', 0.2);
+            // 3. Extract space-efficient dashboard copy to remain safely under storage bounds (0.15 Quality)
+            const previewSnapshot = captureCanvas.toDataURL('image/jpeg', 0.15);
             
             setTimeout(() => flash.classList.remove('shutter'), 200);
 
@@ -563,7 +575,6 @@
             let history = JSON.parse(localStorage.getItem('englishClubRandomizedRecords')) || [];
             const uniqueId = 'snap_' + Date.now();
             
-            // Store the lightweight thumbnail version to stay perfectly under the 5MB browser limit
             history.push({ id: uniqueId, word: chosenWord, image: previewSnapshot });
             localStorage.setItem('englishClubRandomizedRecords', JSON.stringify(history));
             updateDashboardUI();
@@ -577,7 +588,6 @@
         function downloadSnapshot(base64Image, wordType) {
             const downloadLink = document.createElement('a');
             downloadLink.href = base64Image;
-            // Name format matches the student's exact target vocab choice
             downloadLink.download = `student-love-${wordType}_${Date.now()}.jpg`;
             document.body.appendChild(downloadLink);
             downloadLink.click();
@@ -606,7 +616,6 @@
                 label.className = 'class-snippet';
                 label.innerHTML = `love <b>${item.word}</b>`;
                 
-                // Redundant safety download button in dashboard (uses stored preview quality)
                 const btn = document.createElement('button');
                 btn.className = 'download-card-btn';
                 btn.textContent = '📥 Get Copy';
