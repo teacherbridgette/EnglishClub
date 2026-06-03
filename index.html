@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Head Tilt English Game</title>
+    <title>Infinite Head Tilt English Game</title>
     
-    <!-- Include Jeeliz Weboji library for head tracking -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
+
     <script src="https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/jeelizFaceTransfer.js"></script>
     
     <style>
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            font-family: 'Fredoka', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -22,38 +25,60 @@
             overflow: hidden;
         }
 
+        #score-board {
+            font-size: 26px;
+            font-weight: 600;
+            color: #d63031;
+            margin-bottom: 15px;
+            background: white;
+            padding: 10px 25px;
+            border-radius: 30px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.05);
+        }
+
         #game-container {
             position: relative;
-            width: 800px;
-            height: 600px;
+            width: 850px;
+            height: 560px;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-radius: 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: space-between;
-            padding: 20px;
+            padding: 30px;
             box-sizing: border-box;
         }
 
         #sentence-box {
-            font-size: 28px;
-            font-weight: bold;
-            color: #333;
+            font-size: 32px;
+            font-weight: 600;
+            color: #2d3436;
             text-align: center;
-            margin-top: 20px;
-            background: #eef2f7;
-            padding: 15px 30px;
-            border-radius: 50px;
-            border: 2px dashed #3498db;
-            width: 80%;
+            background: #ffeaa7;
+            padding: 20px 35px;
+            border-radius: 20px;
+            width: 90%;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.1);
         }
 
         .blank {
-            color: #e74c3c;
-            border-bottom: 3px solid #e74c3c;
-            padding: 0 10px;
+            color: #d63031;
+            border-bottom: 4px dashed #d63031;
+            padding: 0 15px;
+            margin: 0 10px;
+        }
+        
+        .blank.filled {
+            color: #27ae60;
+            border-bottom-style: solid;
+            border-bottom-color: #27ae60;
         }
 
         #interaction-zone {
@@ -62,72 +87,74 @@
             align-items: center;
             width: 100%;
             flex-grow: 1;
-            margin: 20px 0;
-            position: relative;
+            margin: 15px 0;
         }
 
         .choice-card {
-            width: 180px;
-            height: 220px;
-            background: #f8f9fa;
-            border: 4px solid #bdc3c7;
-            border-radius: 15px;
+            width: 210px;
+            height: 210px;
+            background: #fbfbfb;
+            border: 5px solid #dfe6e9;
+            border-radius: 25px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.04);
         }
 
         .choice-card .emoji {
-            font-size: 70px;
-            margin-bottom: 10px;
+            font-size: 75px;
+            margin-bottom: 5px;
         }
 
         .choice-card .word {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2c3e50;
+            font-size: 26px;
+            font-weight: 600;
+            color: #2d3436;
         }
 
-        /* Target styles when tilting head */
+        /* Active tracking hover styles */
         .choice-card.active {
             transform: scale(1.15);
-            border-color: #2ecc71;
-            background: #e8f8f5;
-            box-shadow: 0 10px 25px rgba(46, 204, 113, 0.3);
+            border-color: #fdcb6e;
+            background: #fff9e6;
+            box-shadow: 0 15px 30px rgba(253, 203, 110, 0.4);
         }
 
         #camera-container {
             position: relative;
-            width: 240px;
+            width: 180px;
             height: 180px;
-            border-radius: 12px;
+            border-radius: 50%;
             overflow: hidden;
-            border: 4px solid #34495e;
+            border: 6px solid #6c5ce7;
             background: #000;
+            box-shadow: 0 8px 20px rgba(108, 92, 231, 0.2);
         }
 
-        /* The hidden canvas used by Jeeliz, and the mirrored video feed */
         #jeeFaceFilterCanvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            transform: scaleX(-1); /* Mirror view */
+            transform: scaleX(-1); /* Mirror format */
         }
 
         #status-message {
-            font-size: 18px;
-            color: #7f8c8d;
-            font-weight: 500;
-            margin-bottom: 10px;
+            font-size: 20px;
+            color: #6c5ce7;
+            font-weight: 600;
             text-align: center;
+            background: #eeeefd;
+            padding: 10px 30px;
+            border-radius: 50px;
+            width: 80%;
         }
 
-        /* Flash effect for the camera click */
+        /* Screen Flash Overlay */
         #flash {
             position: absolute;
             top: 0;
@@ -137,144 +164,191 @@
             background: white;
             opacity: 0;
             pointer-events: none;
-            border-radius: 20px;
-            transition: opacity 0.1s ease-out;
+            border-radius: 30px;
             z-index: 10;
         }
         #flash.shutter {
-            opacity: 1;
+            animation: flashAnim 0.2s ease-out;
+        }
+        @keyframes flashAnim {
+            0% { opacity: 0; }
+            25% { opacity: 1; }
+            100% { opacity: 0; }
         }
     </style>
 </head>
 <body>
 
+    <div id="score-board">⭐ Score: <span id="score-count">0</span></div>
+
     <div id="game-container">
         <div id="flash"></div>
 
         <div id="sentence-box">
-            I joined the English Club because I love <span id="sentence-blank" class="blank">_______</span>.
+            Loading sentence loop...
         </div>
 
         <div id="interaction-zone">
-            <!-- Left Choice -->
             <div id="choice-left" class="choice-card">
-                <div class="emoji">📚</div>
-                <div class="word">books</div>
+                <div class="emoji" id="left-emoji">❓</div>
+                <div class="word" id="left-word">...</div>
             </div>
 
-            <!-- Center Camera Feed -->
             <div id="camera-container">
                 <canvas id="jeeFaceFilterCanvas"></canvas>
             </div>
 
-            <!-- Right Choice -->
             <div id="choice-right" class="choice-card">
-                <div class="emoji">✍️</div>
-                <div class="word">writing</div>
+                <div class="emoji" id="right-emoji">❓</div>
+                <div class="word" id="right-word">...</div>
             </div>
         </div>
 
         <div id="status-message">
-            Loading camera and face tracking... Please allow camera access.
+            📷 Requesting camera authorization...
         </div>
     </div>
 
     <script>
+        // Endless Question Database
+        const questionsData = [
+            { template: "I joined the English Club because I love ", choices: [{w: "books", e: "📚"}, {w: "writing", e: "✍️"}] },
+            { template: "Tomorrow, our class is going to analyze a classic ", choices: [{w: "poem", e: "📜"}, {w: "novel", e: "📖"}] },
+            { template: "Learning new English idioms is completely ", choices: [{w: "fun", e: "🎉"}, {w: "useful", e: "💡"}] },
+            { template: "I practice speaking English out loud with my ", choices: [{w: "friends", e: "👥"}, {w: "teacher", e: "👩‍🏫"}] },
+            { template: "To improve my listening skills, I enjoy watching ", choices: [{w: "movies", e: "🎬"}, {w: "news", e: "📺"}] },
+            { template: "The hardest part of English class for me is ", choices: [{w: "grammar", e: "🧩"}, {w: "spelling", e: "✏️"}] },
+            { template: "We are going to perform a famous Shakespearean ", choices: [{w: "play", e: "🎭"}, {w: "speech", e: "📢"}] },
+            { template: "I always keep a physical dictionary to lookup a new ", choices: [{w: "word", e: "🔤"}, {w: "phrase", e: "🗣️"}] }
+        ];
+
         const leftCard = document.getElementById('choice-left');
         const rightCard = document.getElementById('choice-right');
-        const blankSpace = document.getElementById('sentence-blank');
+        const sentenceBox = document.getElementById('sentence-box');
         const statusMessage = document.getElementById('status-message');
+        const scoreCount = document.getElementById('score-count');
         const flash = document.getElementById('flash');
 
-        let isSelectionLocked = false;
+        let currentQuestion = null;
+        let score = 0;
+        let isSelectionLocked = true;
         let tiltDuration = 0;
-        const TILT_THRESHOLD = 0.25; // How much to tilt head (radians/values)
-        const HOLD_TIME = 20; // Number of consecutive frames to hold tilt to trigger click
+        
+        const TILT_THRESHOLD = 0.24; // Head angle sensitivity
+        const HOLD_TIME = 15;        // Frames to hold (~0.35 seconds)
 
-        // Generate synthetic camera click audio
+        // Web Audio Synthesizer Engine
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playClickSound() {
+
+        // Short "tick" sound when tilting
+        function playTickSound() {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+            osc.stop(audioCtx.currentTime + 0.03);
         }
 
-        // Text to Speech
-        function speakSentence(chosenWord) {
+        // Camera shutter click sound when chosen
+        function playShutterSound() {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(850, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        // Natural Voice Engine
+        function speakSentence(fullText) {
             if ('speechSynthesis' in window) {
-                // Cancel any ongoing speech
                 window.speechSynthesis.cancel();
-                
-                const text = `I joined the English Club because I love ${chosenWord}.`;
-                const utterance = new SpeechSynthesisUtterance(text);
+                const utterance = new SpeechSynthesisUtterance(fullText);
                 utterance.lang = 'en-US';
-                utterance.rate = 0.9; // Slightly slower for clarity
+                utterance.rate = 0.9;
                 window.speechSynthesis.speak(utterance);
             }
         }
 
-        // Initialize Jeeliz Face Transfer
+        function loadNextQuestion() {
+            const randomIndex = Math.floor(Math.random() * questionsData.length);
+            currentQuestion = questionsData[randomIndex];
+
+            sentenceBox.innerHTML = `${currentQuestion.template} <span id="sentence-blank" class="blank">_______</span>.`;
+            
+            document.getElementById('left-emoji').textContent = currentQuestion.choices[0].e;
+            document.getElementById('left-word').textContent = currentQuestion.choices[0].w;
+            
+            document.getElementById('right-emoji').textContent = currentQuestion.choices[1].e;
+            document.getElementById('right-word').textContent = currentQuestion.choices[1].w;
+
+            leftCard.classList.remove('active');
+            rightCard.classList.remove('active');
+            tiltDuration = 0;
+            isSelectionLocked = false;
+            statusMessage.innerHTML = "↔️ Tilt your head <b>Left</b> or <b>Right</b> to choose!";
+        }
+
+        // Auto-run initialization pipeline immediately
         function initGame() {
             JEEFACETRANSFERAPI.init({
                 canvasId: 'jeeFaceFilterCanvas',
-                NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/', // Location of neural network model
+                NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
                 callbackReady: function(errCode) {
                     if (errCode) {
-                        console.error('Jeeliz initialization failed:', errCode);
-                        statusMessage.innerHTML = "❌ Camera initialization failed. Please refresh and grant permissions.";
+                        statusMessage.innerHTML = "❌ Camera access blocked. Please re-allow tracking permissions.";
                         return;
                     }
-                    statusMessage.innerHTML = "↔️ Tilt your head <b>Left</b> or <b>Right</b> to choose!";
+                    loadNextQuestion();
                     gameLoop();
                 }
             });
         }
 
         function gameLoop() {
-            if (JEEFACETRANSFERAPI.is_detected()) {
-                // Get rotation angles. [pitch, yaw, roll]
-                // Roll measures head tilt left/right
-                const rotation = JEEFACETRANSFERAPI.get_rotationMorph();
-                const roll = rotation[2]; 
+            if (JEEFACETRANSFERAPI.is_detected() && !isSelectionLocked) {
+                const rotation =JEEFACETRANSFERAPI.get_rotationMorph();
+                const roll = rotation[2];
 
-                if (!isSelectionLocked) {
-                    // Head tilted RIGHT (Mirrored: corresponds to Left Card on screen)
-                    if (roll > TILT_THRESHOLD) {
-                        leftCard.classList.add('active');
-                        rightCard.classList.remove('active');
-                        tiltDuration++;
+                if (roll > TILT_THRESHOLD) {
+                    leftCard.classList.add('active');
+                    rightCard.classList.remove('active');
+                    tiltDuration++;
+                    
+                    // Play responsive ticking sounds during hold countdown
+                    if (tiltDuration % 4 === 0) playTickSound();
 
-                        if (tiltDuration >= HOLD_TIME) {
-                            triggerSelection('books');
-                        }
-                    } 
-                    // Head tilted LEFT (Mirrored: corresponds to Right Card on screen)
-                    else if (roll < -TILT_THRESHOLD) {
-                        rightCard.classList.add('active');
-                        leftCard.classList.remove('active');
-                        tiltDuration++;
-
-                        if (tiltDuration >= HOLD_TIME) {
-                            triggerSelection('writing');
-                        }
-                    } 
-                    // Head centered
-                    else {
-                        leftCard.classList.remove('active');
-                        rightCard.classList.remove('active');
-                        tiltDuration = 0;
+                    if (tiltDuration >= HOLD_TIME) {
+                        triggerSelection(currentQuestion.choices[0].w);
                     }
+                } 
+                else if (roll < -TILT_THRESHOLD) {
+                    rightCard.classList.add('active');
+                    leftCard.classList.remove('active');
+                    tiltDuration++;
+                    
+                    if (tiltDuration % 4 === 0) playTickSound();
+
+                    if (tiltDuration >= HOLD_TIME) {
+                        triggerSelection(currentQuestion.choices[1].w);
+                    }
+                } 
+                else {
+                    leftCard.classList.remove('active');
+                    rightCard.classList.remove('active');
+                    tiltDuration = 0;
                 }
-            } else {
-                // Face lost tracking
+            } else if (!isSelectionLocked) {
                 leftCard.classList.remove('active');
                 rightCard.classList.remove('active');
                 tiltDuration = 0;
@@ -283,34 +357,35 @@
             requestAnimationFrame(gameLoop);
         }
 
-        function triggerSelection(word) {
+        function triggerSelection(chosenWord) {
             isSelectionLocked = true;
             
-            // Camera Shutter Flash Effect
-            playClickSound();
+            // Play snapshot camera effect
+            playShutterSound();
             flash.classList.add('shutter');
-            setTimeout(() => flash.classList.remove('shutter'), 150);
+            setTimeout(() => flash.classList.remove('shutter'), 200);
 
-            // Update UI
-            blankSpace.textContent = word;
-            statusMessage.innerHTML = `🎉 Selected: <b>${word}</b>! Reading out loud...`;
+            // Print word into sentence layout
+            const blankSpace = document.getElementById('sentence-blank');
+            blankSpace.textContent = chosenWord;
+            blankSpace.classList.add('filled');
 
-            // TTS Audio output
-            speakSentence(word);
+            statusMessage.innerHTML = `📸 <b>Nice choice!</b> Reading out loud...`;
+            
+            const fullStatement = `${currentQuestion.template} ${chosenWord}.`;
+            speakSentence(fullStatement);
 
-            // Reset game after 4 seconds to try again
+            score++;
+            scoreCount.textContent = score;
+
+            // Short pause before sweeping in the next card frame
             setTimeout(() => {
-                blankSpace.textContent = "_______";
-                statusMessage.innerHTML = "↔️ Tilt your head <b>Left</b> or <b>Right</b> to choose again!";
-                leftCard.classList.remove('active');
-                rightCard.classList.remove('active');
-                tiltDuration = 0;
-                isSelectionLocked = false;
-            }, 4000);
+                loadNextQuestion();
+            }, 3500);
         }
 
-        // Start everything on load
-        window.addEventListener('load', initGame);
+        // Execute automatically on window parse
+        window.addEventListener('DOMContentLoaded', initGame);
     </script>
 </body>
 </html>
