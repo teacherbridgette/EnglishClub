@@ -145,7 +145,6 @@
             z-index: 1;
         }
 
-        /* Fixed tracking dimension layer hidden from raw UI display */
         #jeeFaceFilterCanvas {
             position: absolute;
             top: 0;
@@ -296,7 +295,7 @@
         <div id="flash"></div>
 
         <div id="sentence-box">
-            Analyzing video matrix...
+            Waiting for camera feed...
         </div>
 
         <div id="interaction-zone">
@@ -317,7 +316,7 @@
         </div>
 
         <div id="status-message">
-            📷 Preparing camera sync...
+            📷 Starting camera...
         </div>
     </div>
 
@@ -372,7 +371,7 @@
         let isSelectionLocked = true;
         let tiltDuration = 0;
         
-        const TILT_THRESHOLD = 0.20; // Enhanced responsiveness threshold
+        const TILT_THRESHOLD = 0.20; 
         const HOLD_TIME = 12;        
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -425,10 +424,6 @@
 
         async function initGame() {
             updateDashboardUI();
-            
-            // Clean out click triggers completely
-            leftCard.onclick = null;
-            rightCard.onclick = null;
 
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -436,29 +431,36 @@
                 });
                 webcamVideo.srcObject = stream;
                 
-                // Track using structural mathematical limits directly
-                JEEFACETRANSFERAPI.init({
-                    canvasId: 'jeeFaceFilterCanvas',
-                    NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
-                    callbackReady: function(errCode) {
-                        if (errCode) {
-                            statusMessage.innerHTML = `❌ Face tracking frame error.`;
-                            return;
-                        }
-                        loadNextQuestion();
-                        gameLoop();
-                    }
-                });
+                // TIMING BUG FIX: Wait until the browser actively streams video frames before starting tracker
+                webcamVideo.onloadedmetadata = () => {
+                    webcamVideo.play();
+                    
+                    // Give the physical camera hardware 300ms to stabilize pixels
+                    setTimeout(() => {
+                        JEEFACETRANSFERAPI.init({
+                            canvasId: 'jeeFaceFilterCanvas',
+                            NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
+                            callbackReady: function(errCode) {
+                                if (errCode) {
+                                    statusMessage.innerHTML = `❌ Face tracking failed to sync dimensions.`;
+                                    return;
+                                }
+                                loadNextQuestion();
+                                gameLoop();
+                            }
+                        });
+                    }, 300);
+                };
             } catch (err) {
                 console.error(err);
-                statusMessage.innerHTML = `❌ Camera access failed.`;
+                statusMessage.innerHTML = `❌ Camera access failed or hardware busy.`;
             }
         }
 
         function gameLoop() {
             if (!isSelectionLocked && JEEFACETRANSFERAPI.is_detected()) {
                 const rotation = JEEFACETRANSFERAPI.get_rotationMorph();
-                const roll = rotation[2]; // Z-axis matrix measurement 
+                const roll = rotation[2]; 
 
                 if (roll > TILT_THRESHOLD) {
                     leftCard.classList.add('active');
