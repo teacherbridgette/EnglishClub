@@ -101,7 +101,7 @@
             align-items: center;
             justify-content: center;
             transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.04);
+            box-shadow: 0 8px 16 rgba(0,0,0,0.04);
             user-select: none;
         }
 
@@ -153,7 +153,7 @@
             height: 100%;
             z-index: 2;
             pointer-events: none;
-            opacity: 0;
+            opacity: 0; /* Keeps internal logic happy without masking video frame layout */
         }
 
         #status-message {
@@ -295,7 +295,7 @@
         <div id="flash"></div>
 
         <div id="sentence-box">
-            Waiting for camera feed...
+            Syncing face matrices...
         </div>
 
         <div id="interaction-zone">
@@ -306,7 +306,7 @@
 
             <div id="camera-container">
                 <video id="webcamVideo" autoplay playsinline muted></video>
-                <canvas id="jeeFaceFilterCanvas" width="400" height="400"></canvas>
+                <canvas id="jeeFaceFilterCanvas" width="320" height="320"></canvas>
             </div>
 
             <div id="choice-right" class="choice-card">
@@ -316,7 +316,7 @@
         </div>
 
         <div id="status-message">
-            📷 Starting camera...
+            📷 Initializing tracking elements...
         </div>
     </div>
 
@@ -371,7 +371,7 @@
         let isSelectionLocked = true;
         let tiltDuration = 0;
         
-        const TILT_THRESHOLD = 0.20; 
+        const TILT_THRESHOLD = 0.22; 
         const HOLD_TIME = 12;        
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -422,45 +422,42 @@
             statusMessage.innerHTML = "↔️ Tilt your head <b>Left</b> or <b>Right</b> to choose!";
         }
 
-        async function initGame() {
+        function initGame() {
             updateDashboardUI();
 
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: { ideal: 640 }, height: { ideal: 480 } } 
-                });
-                webcamVideo.srcObject = stream;
-                
-                // TIMING BUG FIX: Wait until the browser actively streams video frames before starting tracker
-                webcamVideo.onloadedmetadata = () => {
-                    webcamVideo.play();
+            // FIXED SYNC: Let Jeeliz create, run, and pipe its own video stream variables into our element directly
+            JEEFACETRANSFERAPI.init({
+                canvasId: 'jeeFaceFilterCanvas',
+                NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
+                videoSettings: {
+                    videoElement: webcamVideo, // Connects directly to our layout video container
+                    facingMode: 'user',
+                    idealWidth: 640,
+                    idealHeight: 480
+                },
+                callbackReady: function(errCode) {
+                    if (errCode) {
+                        console.error("Tracking Error:", errCode);
+                        statusMessage.innerHTML = `❌ Synchronizer engine error (${errCode})`;
+                        return;
+                    }
                     
-                    // Give the physical camera hardware 300ms to stabilize pixels
-                    setTimeout(() => {
-                        JEEFACETRANSFERAPI.init({
-                            canvasId: 'jeeFaceFilterCanvas',
-                            NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
-                            callbackReady: function(errCode) {
-                                if (errCode) {
-                                    statusMessage.innerHTML = `❌ Face tracking failed to sync dimensions.`;
-                                    return;
-                                }
-                                loadNextQuestion();
-                                gameLoop();
-                            }
-                        });
-                    }, 300);
-                };
-            } catch (err) {
-                console.error(err);
-                statusMessage.innerHTML = `❌ Camera access failed or hardware busy.`;
-            }
+                    // Force playback elements to catch up 
+                    webcamVideo.play().then(() => {
+                        loadNextQuestion();
+                        gameLoop();
+                    }).catch(err => {
+                        loadNextQuestion();
+                        gameLoop();
+                    });
+                }
+            });
         }
 
         function gameLoop() {
             if (!isSelectionLocked && JEEFACETRANSFERAPI.is_detected()) {
                 const rotation = JEEFACETRANSFERAPI.get_rotationMorph();
-                const roll = rotation[2]; 
+                const roll = rotation[2]; // Captures exact degree orientation frame matrix
 
                 if (roll > TILT_THRESHOLD) {
                     leftCard.classList.add('active');
@@ -493,9 +490,9 @@
             const ctx = captureCanvas.getContext('2d');
             ctx.translate(captureCanvas.width, 0);
             ctx.scale(-1, 1);
-            const size = Math.min(webcamVideo.videoWidth, webcamVideo.videoHeight);
-            const sX = (webcamVideo.videoWidth - size) / 2;
-            const sY = (webcamVideo.videoHeight - size) / 2;
+            const size = Math.min(webcamVideo.videoWidth || 320, webcamVideo.videoHeight || 240);
+            const sX = ((webcamVideo.videoWidth || 320) - size) / 2;
+            const sY = ((webcamVideo.videoHeight || 240) - size) / 2;
             ctx.drawImage(webcamVideo, sX, sY, size, size, 0, 0, captureCanvas.width, captureCanvas.height);
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             return captureCanvas.toDataURL('image/jpeg', 0.6);
