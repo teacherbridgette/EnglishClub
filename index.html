@@ -256,7 +256,7 @@
 
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
             gap: 10px;
         }
 
@@ -267,6 +267,9 @@
             text-align: center;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             border: 2px solid #edf2f7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .student-snapshot-card img {
@@ -283,6 +286,25 @@
             color: #636e72;
             margin-top: 6px;
             font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .download-card-btn {
+            font-family: 'Fredoka', sans-serif;
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(108, 92, 231, 0.2);
+            transition: background 0.2s;
+        }
+
+        .download-card-btn:hover {
+            background: #5b4cc4;
         }
     </style>
 </head>
@@ -439,7 +461,6 @@
                 });
                 webcamVideo.srcObject = stream;
                 
-                // FIXED BYPASS: Safe fallback initializes tracking logic smoothly even if remote CDN components hang
                 if (typeof JEEFACETRANSFERAPI !== 'undefined') {
                     JEEFACETRANSFERAPI.init({
                         canvasId: 'jeeFaceFilterCanvas',
@@ -463,7 +484,6 @@
             }
         }
 
-        // Instantly unlocks interaction parameters so the flow proceeds safely
         function setupBypassControls() {
             loadNextQuestion();
             isSelectionLocked = false;
@@ -533,7 +553,9 @@
             speakSentence(fullStatement);
 
             let history = JSON.parse(localStorage.getItem('englishClubRandomizedRecords')) || [];
-            history.push({ word: chosenWord, image: snapshot });
+            // Assign a unique ID using timestamps so we can accurately download specific individual cards
+            const uniqueId = 'snap_' + Date.now();
+            history.push({ id: uniqueId, word: chosenWord, image: snapshot });
             localStorage.setItem('englishClubRandomizedRecords', JSON.stringify(history));
             updateDashboardUI();
 
@@ -541,6 +563,16 @@
             scoreCount.textContent = score;
 
             setTimeout(loadNextQuestion, 3500);
+        }
+
+        function downloadSnapshot(base64Image, wordType) {
+            const downloadLink = document.createElement('a');
+            downloadLink.href = base64Image;
+            // Saves automatically with a recognizable format like: student-love-books.jpg
+            downloadLink.download = `student-love-${wordType}.jpg`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
         }
 
         function updateDashboardUI() {
@@ -557,7 +589,25 @@
             history.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'student-snapshot-card';
-                card.innerHTML = `<img src="${item.image}"><div class="class-snippet">love <b>${item.word}</b></div>`;
+                
+                // Image element
+                const img = document.createElement('img');
+                img.src = item.image;
+                
+                // Label snippet
+                const label = document.createElement('div');
+                label.className = 'class-snippet';
+                label.innerHTML = `love <b>${item.word}</b>`;
+                
+                // Interactive download button
+                const btn = document.createElement('button');
+                btn.className = 'download-card-btn';
+                btn.textContent = '💾 Save';
+                btn.onclick = () => downloadSnapshot(item.image, item.word);
+
+                card.appendChild(img);
+                card.appendChild(label);
+                card.appendChild(btn);
                 
                 if (grids[item.word]) {
                     grids[item.word].appendChild(card);
