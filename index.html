@@ -227,9 +227,10 @@
             transition: transform 0.1s;
         }
 
+        /* Shifted dashboard layout grid to 3 columns since books is removed */
         .columns-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 15px;
         }
 
@@ -240,7 +241,6 @@
             min-height: 220px;
             border-top: 6px solid #6c5ce7;
         }
-        .category-column.books-col { border-top-color: #0984e3; }
         .category-column.writing-col { border-top-color: #e84393; }
         .category-column.speaking-col { border-top-color: #2ecc71; }
         .category-column.reading-col { border-top-color: #f1c40f; }
@@ -347,10 +347,6 @@
             <button class="clear-btn" onclick="clearSavedData()">🗑️ Clear Records</button>
         </div>
         <div class="columns-container">
-            <div class="category-column books-col">
-                <div class="column-title">📚 books</div>
-                <div class="cards-grid" id="grid-books"></div>
-            </div>
             <div class="category-column writing-col">
                 <div class="column-title">✍️ writing</div>
                 <div class="cards-grid" id="grid-writing"></div>
@@ -371,8 +367,8 @@
     <script>
         const sentenceTemplate = "I joined the English Club because I love ";
         
+        // Removed "books" options from core tracking object array
         const allOptions = [
-            { w: "books", e: "📚" },
             { w: "writing", e: "✍️" },
             { w: "speaking", e: "🗣️" },
             { w: "reading", e: "📖" }
@@ -456,7 +452,6 @@
         async function initGame() {
             updateDashboardUI();
             try {
-                // Request maximum available camera resolution from the device hardware
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { width: { ideal: 1280 }, height: { ideal: 720 } } 
                 });
@@ -526,25 +521,17 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Processes the canvas image elements correctly and safely
         function captureStudentSnapshot() {
             const ctx = captureCanvas.getContext('2d');
-            
-            // Wipe the rendering layer clean
             ctx.clearRect(0, 0, captureCanvas.width, captureCanvas.height);
-            
-            // Mirror coordinates accurately to match live webcam box behavior
             ctx.translate(captureCanvas.width, 0);
             ctx.scale(-1, 1);
             
-            // Crop a perfect square out of the raw camera frame data
             const size = Math.min(webcamVideo.videoWidth, webcamVideo.videoHeight);
             const sX = (webcamVideo.videoWidth - size) / 2;
             const sY = (webcamVideo.videoHeight - size) / 2;
             
             ctx.drawImage(webcamVideo, sX, sY, size, size, 0, 0, captureCanvas.width, captureCanvas.height);
-            
-            // Reset coordinates system back to default standard layout mapping
             ctx.setTransform(1, 0, 0, 1, 0, 0);
         }
 
@@ -553,14 +540,11 @@
             playShutterSound();
             flash.classList.add('shutter');
             
-            // 1. Render current camera frame data onto the master capture canvas layout
             captureStudentSnapshot();
             
-            // 2. Extract maximum resolution target string (1.0 = 100% Quality Output)
             const hdImage = captureCanvas.toDataURL('image/jpeg', 1.0);
             downloadSnapshot(hdImage, chosenWord);
 
-            // 3. Extract space-efficient dashboard copy to remain safely under storage bounds (0.15 Quality)
             const previewSnapshot = captureCanvas.toDataURL('image/jpeg', 0.15);
             
             setTimeout(() => flash.classList.remove('shutter'), 200);
@@ -596,7 +580,6 @@
 
         function updateDashboardUI() {
             const grids = {
-                books: document.getElementById('grid-books'),
                 writing: document.getElementById('grid-writing'),
                 speaking: document.getElementById('grid-speaking'),
                 reading: document.getElementById('grid-reading')
