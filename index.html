@@ -145,6 +145,7 @@
             z-index: 1;
         }
 
+        /* Fixed tracking dimension layer hidden from raw UI display */
         #jeeFaceFilterCanvas {
             position: absolute;
             top: 0;
@@ -153,6 +154,7 @@
             height: 100%;
             z-index: 2;
             pointer-events: none;
+            opacity: 0;
         }
 
         #status-message {
@@ -294,7 +296,7 @@
         <div id="flash"></div>
 
         <div id="sentence-box">
-            Syncing system elements...
+            Analyzing video matrix...
         </div>
 
         <div id="interaction-zone">
@@ -305,7 +307,7 @@
 
             <div id="camera-container">
                 <video id="webcamVideo" autoplay playsinline muted></video>
-                <canvas id="jeeFaceFilterCanvas"></canvas>
+                <canvas id="jeeFaceFilterCanvas" width="400" height="400"></canvas>
             </div>
 
             <div id="choice-right" class="choice-card">
@@ -370,8 +372,8 @@
         let isSelectionLocked = true;
         let tiltDuration = 0;
         
-        const TILT_THRESHOLD = 0.22; 
-        const HOLD_TIME = 14;        
+        const TILT_THRESHOLD = 0.20; // Enhanced responsiveness threshold
+        const HOLD_TIME = 12;        
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -402,16 +404,6 @@
             osc.stop(audioCtx.currentTime + 0.15);
         }
 
-        function speakSentence(fullText) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(fullText);
-                utterance.lang = 'en-US';
-                utterance.rate = 0.9;
-                window.speechSynthesis.speak(utterance);
-            }
-        }
-
         function loadNextQuestion() {
             const shuffled = [...allOptions].sort(() => 0.5 - Math.random());
             currentChoices = [shuffled[0], shuffled[1]];
@@ -433,50 +425,40 @@
 
         async function initGame() {
             updateDashboardUI();
+            
+            // Clean out click triggers completely
+            leftCard.onclick = null;
+            rightCard.onclick = null;
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { width: { ideal: 640 }, height: { ideal: 480 } } 
                 });
                 webcamVideo.srcObject = stream;
                 
-                // FIXED BYPASS: Safe fallback initializes tracking logic smoothly even if remote CDN components hang
-                if (typeof JEEFACETRANSFERAPI !== 'undefined') {
-                    JEEFACETRANSFERAPI.init({
-                        canvasId: 'jeeFaceFilterCanvas',
-                        NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
-                        callbackReady: function(errCode) {
-                            if (errCode) {
-                                console.warn("Library failed, entering instant execution mode.");
-                                setupBypassControls();
-                                return;
-                            }
-                            loadNextQuestion();
-                            gameLoop();
+                // Track using structural mathematical limits directly
+                JEEFACETRANSFERAPI.init({
+                    canvasId: 'jeeFaceFilterCanvas',
+                    NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
+                    callbackReady: function(errCode) {
+                        if (errCode) {
+                            statusMessage.innerHTML = `❌ Face tracking frame error.`;
+                            return;
                         }
-                    });
-                } else {
-                    setupBypassControls();
-                }
+                        loadNextQuestion();
+                        gameLoop();
+                    }
+                });
             } catch (err) {
                 console.error(err);
-                setupBypassControls();
+                statusMessage.innerHTML = `❌ Camera access failed.`;
             }
         }
 
-        // Instantly unlocks interaction parameters so the flow proceeds safely
-        function setupBypassControls() {
-            loadNextQuestion();
-            isSelectionLocked = false;
-            statusMessage.innerHTML = "✨ System Ready! Click/Tap the <b>Left</b> or <b>Right</b> card to lock your choice!";
-            
-            leftCard.onclick = () => { if(!isSelectionLocked) triggerSelection(currentChoices[0].w); };
-            rightCard.onclick = () => { if(!isSelectionLocked) triggerSelection(currentChoices[1].w); };
-        }
-
         function gameLoop() {
-            if (typeof JEEFACETRANSFERAPI !== 'undefined' && JEEFACETRANSFERAPI.is_detected() && !isSelectionLocked) {
+            if (!isSelectionLocked && JEEFACETRANSFERAPI.is_detected()) {
                 const rotation = JEEFACETRANSFERAPI.get_rotationMorph();
-                const roll = rotation[2]; 
+                const roll = rotation[2]; // Z-axis matrix measurement 
 
                 if (roll > TILT_THRESHOLD) {
                     leftCard.classList.add('active');
@@ -527,10 +509,7 @@
 
             document.getElementById('sentence-blank').textContent = chosenWord;
             document.getElementById('sentence-blank').classList.add('filled');
-            statusMessage.innerHTML = `📸 <b>Captured!</b> Reading out loud...`;
-            
-            const fullStatement = `${sentenceTemplate} ${chosenWord}.`;
-            speakSentence(fullStatement);
+            statusMessage.innerHTML = `📸 <b>Captured choice!</b> Preparing next loop...`;
 
             let history = JSON.parse(localStorage.getItem('englishClubRandomizedRecords')) || [];
             history.push({ word: chosenWord, image: snapshot });
@@ -540,7 +519,7 @@
             score++;
             scoreCount.textContent = score;
 
-            setTimeout(loadNextQuestion, 3500);
+            setTimeout(loadNextQuestion, 3000);
         }
 
         function updateDashboardUI() {
