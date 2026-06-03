@@ -102,6 +102,7 @@
             justify-content: center;
             transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             box-shadow: 0 8px 16px rgba(0,0,0,0.04);
+            user-select: none;
         }
 
         .choice-card .emoji {
@@ -293,7 +294,7 @@
         <div id="flash"></div>
 
         <div id="sentence-box">
-            Waking up camera stream...
+            Syncing system elements...
         </div>
 
         <div id="interaction-zone">
@@ -433,35 +434,47 @@
         async function initGame() {
             updateDashboardUI();
             try {
-                // BUG FIX: Removed absolute sizing to accept natural camera ratios on classrooms screens
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        width: { ideal: 640 }, 
-                        height: { ideal: 480 } 
-                    } 
+                    video: { width: { ideal: 640 }, height: { ideal: 480 } } 
                 });
                 webcamVideo.srcObject = stream;
                 
-                JEEFACETRANSFERAPI.init({
-                    canvasId: 'jeeFaceFilterCanvas',
-                    NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
-                    callbackReady: function(errCode) {
-                        if (errCode) {
-                            statusMessage.innerHTML = `❌ Tracking initialization failed (Code: ${errCode})`;
-                            return;
+                // FIXED BYPASS: Safe fallback initializes tracking logic smoothly even if remote CDN components hang
+                if (typeof JEEFACETRANSFERAPI !== 'undefined') {
+                    JEEFACETRANSFERAPI.init({
+                        canvasId: 'jeeFaceFilterCanvas',
+                        NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
+                        callbackReady: function(errCode) {
+                            if (errCode) {
+                                console.warn("Library failed, entering instant execution mode.");
+                                setupBypassControls();
+                                return;
+                            }
+                            loadNextQuestion();
+                            gameLoop();
                         }
-                        loadNextQuestion();
-                        gameLoop();
-                    }
-                });
+                    });
+                } else {
+                    setupBypassControls();
+                }
             } catch (err) {
-                console.error("Camera Error Logged: ", err);
-                statusMessage.innerHTML = `❌ Camera stream configuration failed. (${err.name})`;
+                console.error(err);
+                setupBypassControls();
             }
         }
 
+        // Instantly unlocks interaction parameters so the flow proceeds safely
+        function setupBypassControls() {
+            loadNextQuestion();
+            isSelectionLocked = false;
+            statusMessage.innerHTML = "✨ System Ready! Click/Tap the <b>Left</b> or <b>Right</b> card to lock your choice!";
+            
+            leftCard.onclick = () => { if(!isSelectionLocked) triggerSelection(currentChoices[0].w); };
+            rightCard.onclick = () => { if(!isSelectionLocked) triggerSelection(currentChoices[1].w); };
+        }
+
         function gameLoop() {
-            if (JEEFACETRANSFERAPI.is_detected() && !isSelectionLocked) {
+            if (typeof JEEFACETRANSFERAPI !== 'undefined' && JEEFACETRANSFERAPI.is_detected() && !isSelectionLocked) {
                 const rotation = JEEFACETRANSFERAPI.get_rotationMorph();
                 const roll = rotation[2]; 
 
