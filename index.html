@@ -115,7 +115,6 @@
             color: #2d3436;
         }
 
-        /* Active tracking hover styles */
         .choice-card.active {
             transform: scale(1.15);
             border-color: #fdcb6e;
@@ -123,10 +122,11 @@
             box-shadow: 0 15px 30px rgba(253, 203, 110, 0.4);
         }
 
+        /* Camera Display Viewport Window */
         #camera-container {
             position: relative;
-            width: 180px;
-            height: 180px;
+            width: 190px;
+            height: 190px;
             border-radius: 50%;
             overflow: hidden;
             border: 6px solid #6c5ce7;
@@ -134,13 +134,27 @@
             box-shadow: 0 8px 20px rgba(108, 92, 231, 0.2);
         }
 
+        /* Displays actual mirrored camera source stream */
+        #webcamVideo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror camera feed so movements feel natural */
+            z-index: 1;
+        }
+
+        /* Overlay canvas used by Jeeliz framework logic background tracking */
         #jeeFaceFilterCanvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            transform: scaleX(-1); /* Mirror format */
+            z-index: 2;
+            pointer-events: none;
         }
 
         #status-message {
@@ -154,7 +168,6 @@
             width: 80%;
         }
 
-        /* Screen Flash Overlay */
         #flash {
             position: absolute;
             top: 0;
@@ -185,7 +198,7 @@
         <div id="flash"></div>
 
         <div id="sentence-box">
-            Loading sentence loop...
+            Starting video camera...
         </div>
 
         <div id="interaction-zone">
@@ -195,6 +208,7 @@
             </div>
 
             <div id="camera-container">
+                <video id="webcamVideo" autoplay playsinline muted></video>
                 <canvas id="jeeFaceFilterCanvas"></canvas>
             </div>
 
@@ -210,7 +224,6 @@
     </div>
 
     <script>
-        // Endless Question Database
         const questionsData = [
             { template: "I joined the English Club because I love ", choices: [{w: "books", e: "📚"}, {w: "writing", e: "✍️"}] },
             { template: "Tomorrow, our class is going to analyze a classic ", choices: [{w: "poem", e: "📜"}, {w: "novel", e: "📖"}] },
@@ -228,19 +241,19 @@
         const statusMessage = document.getElementById('status-message');
         const scoreCount = document.getElementById('score-count');
         const flash = document.getElementById('flash');
+        const webcamVideo = document.getElementById('webcamVideo');
 
         let currentQuestion = null;
         let score = 0;
         let isSelectionLocked = true;
         let tiltDuration = 0;
         
-        const TILT_THRESHOLD = 0.24; // Head angle sensitivity
-        const HOLD_TIME = 15;        // Frames to hold (~0.35 seconds)
+        const TILT_THRESHOLD = 0.24; 
+        const HOLD_TIME = 15;        
 
-        // Web Audio Synthesizer Engine
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // Short "tick" sound when tilting
+        // Ticking audio feedback during a sustained head tilt countdown
         function playTickSound() {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -254,7 +267,7 @@
             osc.stop(audioCtx.currentTime + 0.03);
         }
 
-        // Camera shutter click sound when chosen
+        // Shutter snap sound when selection completes
         function playShutterSound() {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -269,7 +282,6 @@
             osc.stop(audioCtx.currentTime + 0.15);
         }
 
-        // Natural Voice Engine
         function speakSentence(fullText) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -299,25 +311,35 @@
             statusMessage.innerHTML = "↔️ Tilt your head <b>Left</b> or <b>Right</b> to choose!";
         }
 
-        // Auto-run initialization pipeline immediately
-        function initGame() {
-            JEEFACETRANSFERAPI.init({
-                canvasId: 'jeeFaceFilterCanvas',
-                NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
-                callbackReady: function(errCode) {
-                    if (errCode) {
-                        statusMessage.innerHTML = "❌ Camera access blocked. Please re-allow tracking permissions.";
-                        return;
+        // Auto-run entry method that binds standard video feed alongside the tracker engine
+        async function initGame() {
+            try {
+                // Request access from browser directly to start the visual video stream layout
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+                webcamVideo.srcObject = stream;
+                
+                // Initialize the AI Tracking matrix overlay simultaneously
+                JEEFACETRANSFERAPI.init({
+                    canvasId: 'jeeFaceFilterCanvas',
+                    NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
+                    callbackReady: function(errCode) {
+                        if (errCode) {
+                            statusMessage.innerHTML = "❌ Tracking calibration missing.";
+                            return;
+                        }
+                        loadNextQuestion();
+                        gameLoop();
                     }
-                    loadNextQuestion();
-                    gameLoop();
-                }
-            });
+                });
+            } catch (err) {
+                console.error("Camera access error:", err);
+                statusMessage.innerHTML = "❌ Camera access blocked. Please re-allow tracking permissions.";
+            }
         }
 
         function gameLoop() {
             if (JEEFACETRANSFERAPI.is_detected() && !isSelectionLocked) {
-                const rotation =JEEFACETRANSFERAPI.get_rotationMorph();
+                const rotation = JEEFACETRANSFERAPI.get_rotationMorph();
                 const roll = rotation[2];
 
                 if (roll > TILT_THRESHOLD) {
@@ -325,8 +347,7 @@
                     rightCard.classList.remove('active');
                     tiltDuration++;
                     
-                    // Play responsive ticking sounds during hold countdown
-                    if (tiltDuration % 4 === 0) playTickSound();
+                    if (tiltDuration % 3 === 0) playTickSound();
 
                     if (tiltDuration >= HOLD_TIME) {
                         triggerSelection(currentQuestion.choices[0].w);
@@ -337,7 +358,7 @@
                     leftCard.classList.remove('active');
                     tiltDuration++;
                     
-                    if (tiltDuration % 4 === 0) playTickSound();
+                    if (tiltDuration % 3 === 0) playTickSound();
 
                     if (tiltDuration >= HOLD_TIME) {
                         triggerSelection(currentQuestion.choices[1].w);
@@ -360,12 +381,10 @@
         function triggerSelection(chosenWord) {
             isSelectionLocked = true;
             
-            // Play snapshot camera effect
             playShutterSound();
             flash.classList.add('shutter');
             setTimeout(() => flash.classList.remove('shutter'), 200);
 
-            // Print word into sentence layout
             const blankSpace = document.getElementById('sentence-blank');
             blankSpace.textContent = chosenWord;
             blankSpace.classList.add('filled');
@@ -378,13 +397,11 @@
             score++;
             scoreCount.textContent = score;
 
-            // Short pause before sweeping in the next card frame
             setTimeout(() => {
                 loadNextQuestion();
             }, 3500);
         }
 
-        // Execute automatically on window parse
         window.addEventListener('DOMContentLoaded', initGame);
     </script>
 </body>
