@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Infinite Head Tilt English Game</title>
+    <title>Infinite Head Tilt English Game with Dashboard</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,15 +14,14 @@
     <style>
         body {
             margin: 0;
-            padding: 0;
+            padding: 20px 0;
             background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
             font-family: 'Fredoka', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
-            overflow: hidden;
+            overflow-y: auto;
         }
 
         #score-board {
@@ -49,6 +48,7 @@
             justify-content: space-between;
             padding: 30px;
             box-sizing: border-box;
+            margin-bottom: 40px;
         }
 
         #sentence-box {
@@ -113,6 +113,7 @@
             font-size: 26px;
             font-weight: 600;
             color: #2d3436;
+            text-transform: capitalize;
         }
 
         .choice-card.active {
@@ -122,7 +123,6 @@
             box-shadow: 0 15px 30px rgba(253, 203, 110, 0.4);
         }
 
-        /* Camera Display Viewport Window */
         #camera-container {
             position: relative;
             width: 190px;
@@ -134,7 +134,6 @@
             box-shadow: 0 8px 20px rgba(108, 92, 231, 0.2);
         }
 
-        /* Displays actual mirrored camera source stream */
         #webcamVideo {
             position: absolute;
             top: 0;
@@ -142,11 +141,10 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Mirror camera feed so movements feel natural */
+            transform: scaleX(-1);
             z-index: 1;
         }
 
-        /* Overlay canvas used by Jeeliz framework logic background tracking */
         #jeeFaceFilterCanvas {
             position: absolute;
             top: 0;
@@ -188,6 +186,104 @@
             25% { opacity: 1; }
             100% { opacity: 0; }
         }
+
+        /* --- DASHBOARD STYLES --- */
+        #dashboard {
+            width: 95%;
+            max-width: 1100px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            padding: 25px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 3px dashed #6c5ce7;
+            padding-bottom: 10px;
+        }
+
+        .dashboard-header h2 {
+            margin: 0;
+            color: #6c5ce7;
+            font-size: 28px;
+        }
+
+        .clear-btn {
+            font-family: 'Fredoka', sans-serif;
+            background: #d63031;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(214, 48, 49, 0.2);
+            transition: transform 0.1s;
+        }
+
+        .columns-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .category-column {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 15px;
+            min-height: 220px;
+            border-top: 6px solid #6c5ce7;
+        }
+        .category-column.books-col { border-top-color: #0984e3; }
+        .category-column.writing-col { border-top-color: #e84393; }
+        .category-column.speaking-col { border-top-color: #2ecc71; }
+        .category-column.reading-col { border-top-color: #f1c40f; }
+
+        .column-title {
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #2d3436;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+        }
+
+        .student-snapshot-card {
+            background: white;
+            border-radius: 15px;
+            padding: 8px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 2px solid #edf2f7;
+        }
+
+        .student-snapshot-card img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #6c5ce7;
+            background: #ddd;
+        }
+
+        .student-snapshot-card .class-snippet {
+            font-size: 12px;
+            color: #636e72;
+            margin-top: 6px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -198,7 +294,7 @@
         <div id="flash"></div>
 
         <div id="sentence-box">
-            Starting video camera...
+            Waking up camera stream...
         </div>
 
         <div id="interaction-zone">
@@ -219,20 +315,46 @@
         </div>
 
         <div id="status-message">
-            📷 Requesting camera authorization...
+            📷 Preparing camera sync...
         </div>
     </div>
 
+    <div id="dashboard">
+        <div class="dashboard-header">
+            <h2>📊 Teacher Result Dashboard</h2>
+            <button class="clear-btn" onclick="clearSavedData()">🗑️ Clear Records</button>
+        </div>
+        <div class="columns-container">
+            <div class="category-column books-col">
+                <div class="column-title">📚 books</div>
+                <div class="cards-grid" id="grid-books"></div>
+            </div>
+            <div class="category-column writing-col">
+                <div class="column-title">✍️ writing</div>
+                <div class="cards-grid" id="grid-writing"></div>
+            </div>
+            <div class="category-column speaking-col">
+                <div class="column-title">🗣️ speaking</div>
+                <div class="cards-grid" id="grid-speaking"></div>
+            </div>
+            <div class="category-column reading-col">
+                <div class="column-title">📖 reading</div>
+                <div class="cards-grid" id="grid-reading"></div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="hiddenCaptureCanvas" width="320" height="320" style="display:none;"></canvas>
+
     <script>
-        const questionsData = [
-            { template: "I joined the English Club because I love ", choices: [{w: "books", e: "📚"}, {w: "writing", e: "✍️"}] },
-            { template: "Tomorrow, our class is going to analyze a classic ", choices: [{w: "poem", e: "📜"}, {w: "novel", e: "📖"}] },
-            { template: "Learning new English idioms is completely ", choices: [{w: "fun", e: "🎉"}, {w: "useful", e: "💡"}] },
-            { template: "I practice speaking English out loud with my ", choices: [{w: "friends", e: "👥"}, {w: "teacher", e: "👩‍🏫"}] },
-            { template: "To improve my listening skills, I enjoy watching ", choices: [{w: "movies", e: "🎬"}, {w: "news", e: "📺"}] },
-            { template: "The hardest part of English class for me is ", choices: [{w: "grammar", e: "🧩"}, {w: "spelling", e: "✏️"}] },
-            { template: "We are going to perform a famous Shakespearean ", choices: [{w: "play", e: "🎭"}, {w: "speech", e: "📢"}] },
-            { template: "I always keep a physical dictionary to lookup a new ", choices: [{w: "word", e: "🔤"}, {w: "phrase", e: "🗣️"}] }
+        const sentenceTemplate = "I joined the English Club because I love ";
+        
+        // The pool of 4 distinct choices
+        const allOptions = [
+            { w: "books", e: "📚" },
+            { w: "writing", e: "✍️" },
+            { w: "speaking", e: "🗣️" },
+            { w: "reading", e: "📖" }
         ];
 
         const leftCard = document.getElementById('choice-left');
@@ -242,18 +364,18 @@
         const scoreCount = document.getElementById('score-count');
         const flash = document.getElementById('flash');
         const webcamVideo = document.getElementById('webcamVideo');
+        const captureCanvas = document.getElementById('hiddenCaptureCanvas');
 
-        let currentQuestion = null;
+        let currentChoices = [];
         let score = 0;
         let isSelectionLocked = true;
         let tiltDuration = 0;
         
-        const TILT_THRESHOLD = 0.24; 
-        const HOLD_TIME = 15;        
+        const TILT_THRESHOLD = 0.22; 
+        const HOLD_TIME = 14;        
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // Ticking audio feedback during a sustained head tilt countdown
         function playTickSound() {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -267,7 +389,6 @@
             osc.stop(audioCtx.currentTime + 0.03);
         }
 
-        // Shutter snap sound when selection completes
         function playShutterSound() {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -292,17 +413,21 @@
             }
         }
 
+        // Randomly selects 2 unique options from the pool of 4 and sets them up
         function loadNextQuestion() {
-            const randomIndex = Math.floor(Math.random() * questionsData.length);
-            currentQuestion = questionsData[randomIndex];
+            // Shuffle array quickly
+            const shuffled = [...allOptions].sort(() => 0.5 - Math.random());
+            currentChoices = [shuffled[0], shuffled[1]];
 
-            sentenceBox.innerHTML = `${currentQuestion.template} <span id="sentence-blank" class="blank">_______</span>.`;
+            sentenceBox.innerHTML = `${sentenceTemplate} <span id="sentence-blank" class="blank">_______</span>.`;
             
-            document.getElementById('left-emoji').textContent = currentQuestion.choices[0].e;
-            document.getElementById('left-word').textContent = currentQuestion.choices[0].w;
+            // Set left choice
+            document.getElementById('left-emoji').textContent = currentChoices[0].e;
+            document.getElementById('left-word').textContent = currentChoices[0].w;
             
-            document.getElementById('right-emoji').textContent = currentQuestion.choices[1].e;
-            document.getElementById('right-word').textContent = currentQuestion.choices[1].w;
+            // Set right choice
+            document.getElementById('right-emoji').textContent = currentChoices[1].e;
+            document.getElementById('right-word').textContent = currentChoices[1].w;
 
             leftCard.classList.remove('active');
             rightCard.classList.remove('active');
@@ -311,20 +436,18 @@
             statusMessage.innerHTML = "↔️ Tilt your head <b>Left</b> or <b>Right</b> to choose!";
         }
 
-        // Auto-run entry method that binds standard video feed alongside the tracker engine
         async function initGame() {
+            updateDashboardUI();
             try {
-                // Request access from browser directly to start the visual video stream layout
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 } });
                 webcamVideo.srcObject = stream;
                 
-                // Initialize the AI Tracking matrix overlay simultaneously
                 JEEFACETRANSFERAPI.init({
                     canvasId: 'jeeFaceFilterCanvas',
                     NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
                     callbackReady: function(errCode) {
                         if (errCode) {
-                            statusMessage.innerHTML = "❌ Tracking calibration missing.";
+                            statusMessage.innerHTML = "❌ Tracking library failed to initialize.";
                             return;
                         }
                         loadNextQuestion();
@@ -332,37 +455,29 @@
                     }
                 });
             } catch (err) {
-                console.error("Camera access error:", err);
-                statusMessage.innerHTML = "❌ Camera access blocked. Please re-allow tracking permissions.";
+                console.error(err);
+                statusMessage.innerHTML = "❌ Camera access blocked. Click the camera icon in your address bar to allow it!";
             }
         }
 
         function gameLoop() {
             if (JEEFACETRANSFERAPI.is_detected() && !isSelectionLocked) {
                 const rotation = JEEFACETRANSFERAPI.get_rotationMorph();
-                const roll = rotation[2];
+                const roll = rotation[2]; 
 
                 if (roll > TILT_THRESHOLD) {
                     leftCard.classList.add('active');
                     rightCard.classList.remove('active');
                     tiltDuration++;
-                    
                     if (tiltDuration % 3 === 0) playTickSound();
-
-                    if (tiltDuration >= HOLD_TIME) {
-                        triggerSelection(currentQuestion.choices[0].w);
-                    }
+                    if (tiltDuration >= HOLD_TIME) triggerSelection(currentChoices[0].w);
                 } 
                 else if (roll < -TILT_THRESHOLD) {
                     rightCard.classList.add('active');
                     leftCard.classList.remove('active');
                     tiltDuration++;
-                    
                     if (tiltDuration % 3 === 0) playTickSound();
-
-                    if (tiltDuration >= HOLD_TIME) {
-                        triggerSelection(currentQuestion.choices[1].w);
-                    }
+                    if (tiltDuration >= HOLD_TIME) triggerSelection(currentChoices[1].w);
                 } 
                 else {
                     leftCard.classList.remove('active');
@@ -374,32 +489,76 @@
                 rightCard.classList.remove('active');
                 tiltDuration = 0;
             }
-
             requestAnimationFrame(gameLoop);
+        }
+
+        function captureStudentSnapshot() {
+            const ctx = captureCanvas.getContext('2d');
+            ctx.translate(captureCanvas.width, 0);
+            ctx.scale(-1, 1);
+            const size = Math.min(webcamVideo.videoWidth, webcamVideo.videoHeight);
+            const sX = (webcamVideo.videoWidth - size) / 2;
+            const sY = (webcamVideo.videoHeight - size) / 2;
+            ctx.drawImage(webcamVideo, sX, sY, size, size, 0, 0, captureCanvas.width, captureCanvas.height);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            return captureCanvas.toDataURL('image/jpeg', 0.6);
         }
 
         function triggerSelection(chosenWord) {
             isSelectionLocked = true;
-            
             playShutterSound();
             flash.classList.add('shutter');
+            
+            const snapshot = captureStudentSnapshot();
             setTimeout(() => flash.classList.remove('shutter'), 200);
 
-            const blankSpace = document.getElementById('sentence-blank');
-            blankSpace.textContent = chosenWord;
-            blankSpace.classList.add('filled');
-
-            statusMessage.innerHTML = `📸 <b>Nice choice!</b> Reading out loud...`;
+            document.getElementById('sentence-blank').textContent = chosenWord;
+            document.getElementById('sentence-blank').classList.add('filled');
+            statusMessage.innerHTML = `📸 <b>Captured!</b> Reading out loud...`;
             
-            const fullStatement = `${currentQuestion.template} ${chosenWord}.`;
+            const fullStatement = `${sentenceTemplate} ${chosenWord}.`;
             speakSentence(fullStatement);
+
+            // Save to browser log storage
+            let history = JSON.parse(localStorage.getItem('englishClubRandomizedRecords')) || [];
+            history.push({ word: chosenWord, image: snapshot });
+            localStorage.setItem('englishClubRandomizedRecords', JSON.stringify(history));
+            updateDashboardUI();
 
             score++;
             scoreCount.textContent = score;
 
-            setTimeout(() => {
-                loadNextQuestion();
-            }, 3500);
+            setTimeout(loadNextQuestion, 3500);
+        }
+
+        function updateDashboardUI() {
+            const grids = {
+                books: document.getElementById('grid-books'),
+                writing: document.getElementById('grid-writing'),
+                speaking: document.getElementById('grid-speaking'),
+                reading: document.getElementById('grid-reading')
+            };
+            
+            // Reset grids
+            Object.values(grids).forEach(grid => grid.innerHTML = '');
+            
+            const history = JSON.parse(localStorage.getItem('englishClubRandomizedRecords')) || [];
+            history.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'student-snapshot-card';
+                card.innerHTML = `<img src="${item.image}"><div class="class-snippet">love <b>${item.word}</b></div>`;
+                
+                if (grids[item.word]) {
+                    grids[item.word].appendChild(card);
+                }
+            });
+        }
+
+        function clearSavedData() {
+            if (confirm("Clear all student submissions?")) {
+                localStorage.removeItem('englishClubRandomizedRecords');
+                updateDashboardUI();
+            }
         }
 
         window.addEventListener('DOMContentLoaded', initGame);
