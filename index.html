@@ -141,13 +141,18 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Mirrored for intuitive control */
-            z-index: 5;
-            display: block !important; /* Forces layout visibility */
+            transform: scaleX(-1);
+            z-index: 1;
         }
 
         #jeeFaceFilterCanvas {
-            display: none !important; /* Hides tracking overlays so they don't block the video frame */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
         }
 
         #status-message {
@@ -300,7 +305,7 @@
 
             <div id="camera-container">
                 <video id="webcamVideo" autoplay playsinline muted></video>
-                <canvas id="jeeFaceFilterCanvas" width="320" height="320"></canvas>
+                <canvas id="jeeFaceFilterCanvas"></canvas>
             </div>
 
             <div id="choice-right" class="choice-card">
@@ -397,6 +402,16 @@
             osc.stop(audioCtx.currentTime + 0.15);
         }
 
+        function speakSentence(fullText) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(fullText);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
         function loadNextQuestion() {
             const shuffled = [...allOptions].sort(() => 0.5 - Math.random());
             currentChoices = [shuffled[0], shuffled[1]];
@@ -418,37 +433,37 @@
 
         async function initGame() {
             updateDashboardUI();
-            
-            if (typeof JEEFACETRANSFERAPI !== 'undefined') {
-                JEEFACETRANSFERAPI.init({
-                    canvasId: 'jeeFaceFilterCanvas',
-                    NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
-                    videoSettings: {
-                        videoElement: webcamVideo,
-                        facingMode: 'user',
-                        idealWidth: 640,
-                        idealHeight: 480
-                    },
-                    callbackReady: function(errCode) {
-                        if (errCode) {
-                            console.warn("Library synchronization issue, setting up bypass click mode.");
-                            setupBypassControls();
-                            return;
-                        }
-                        webcamVideo.play().then(() => {
-                            loadNextQuestion();
-                            gameLoop();
-                        }).catch(() => {
-                            loadNextQuestion();
-                            gameLoop();
-                        });
-                    }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: { ideal: 640 }, height: { ideal: 480 } } 
                 });
-            } else {
+                webcamVideo.srcObject = stream;
+                
+                // FIXED BYPASS: Safe fallback initializes tracking logic smoothly even if remote CDN components hang
+                if (typeof JEEFACETRANSFERAPI !== 'undefined') {
+                    JEEFACETRANSFERAPI.init({
+                        canvasId: 'jeeFaceFilterCanvas',
+                        NNCpath: 'https://cdn.jsdelivr.net/npm/jeelizweboji@2.1.2/dist/',
+                        callbackReady: function(errCode) {
+                            if (errCode) {
+                                console.warn("Library failed, entering instant execution mode.");
+                                setupBypassControls();
+                                return;
+                            }
+                            loadNextQuestion();
+                            gameLoop();
+                        }
+                    });
+                } else {
+                    setupBypassControls();
+                }
+            } catch (err) {
+                console.error(err);
                 setupBypassControls();
             }
         }
 
+        // Instantly unlocks interaction parameters so the flow proceeds safely
         function setupBypassControls() {
             loadNextQuestion();
             isSelectionLocked = false;
@@ -494,9 +509,9 @@
             const ctx = captureCanvas.getContext('2d');
             ctx.translate(captureCanvas.width, 0);
             ctx.scale(-1, 1);
-            const size = Math.min(webcamVideo.videoWidth || 320, webcamVideo.videoHeight || 240);
-            const sX = ((webcamVideo.videoWidth || 320) - size) / 2;
-            const sY = ((webcamVideo.videoHeight || 240) - size) / 2;
+            const size = Math.min(webcamVideo.videoWidth, webcamVideo.videoHeight);
+            const sX = (webcamVideo.videoWidth - size) / 2;
+            const sY = (webcamVideo.videoHeight - size) / 2;
             ctx.drawImage(webcamVideo, sX, sY, size, size, 0, 0, captureCanvas.width, captureCanvas.height);
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             return captureCanvas.toDataURL('image/jpeg', 0.6);
@@ -512,7 +527,10 @@
 
             document.getElementById('sentence-blank').textContent = chosenWord;
             document.getElementById('sentence-blank').classList.add('filled');
-            statusMessage.innerHTML = `📸 <b>Captured choice!</b> Preparing next loop...`;
+            statusMessage.innerHTML = `📸 <b>Captured!</b> Reading out loud...`;
+            
+            const fullStatement = `${sentenceTemplate} ${chosenWord}.`;
+            speakSentence(fullStatement);
 
             let history = JSON.parse(localStorage.getItem('englishClubRandomizedRecords')) || [];
             history.push({ word: chosenWord, image: snapshot });
@@ -522,7 +540,7 @@
             score++;
             scoreCount.textContent = score;
 
-            setTimeout(loadNextQuestion, 3000);
+            setTimeout(loadNextQuestion, 3500);
         }
 
         function updateDashboardUI() {
